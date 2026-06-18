@@ -35,8 +35,8 @@ export default function Tips() {
 
   const apiCategory = category === "all" ? undefined : category;
   const { data: tips, isLoading } = useListTips(
-    { query: { queryKey: getListTipsQueryKey(apiCategory ? { category: apiCategory } : {}) } },
-    apiCategory ? { category: apiCategory } : {}
+    apiCategory ? { category: apiCategory } : {},
+    { query: { queryKey: getListTipsQueryKey(apiCategory ? { category: apiCategory } : {}) } }
   );
 
   return (
@@ -46,8 +46,8 @@ export default function Tips() {
         <p className="text-muted-foreground mt-1">Practical advice to reduce your carbon footprint</p>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <Filter className="h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Filter tips by category">
+        <Filter className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         {CATEGORIES.map(cat => (
           <Button
             key={cat}
@@ -55,6 +55,8 @@ export default function Tips() {
             variant={category === cat ? "default" : "outline"}
             className={category === cat ? "bg-primary text-primary-foreground" : "text-muted-foreground border-border"}
             onClick={() => setCategory(cat)}
+            aria-pressed={category === cat}
+            aria-label={`Filter by ${cat === "all" ? "all categories" : cat}`}
           >
             <span className="capitalize">{cat}</span>
           </Button>
@@ -62,38 +64,46 @@ export default function Tips() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2" aria-busy="true" aria-label="Loading tips">
           {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
         </div>
       ) : !tips || tips.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
-          <Leaf className="h-10 w-10 mx-auto mb-3 opacity-20" />
+          <Leaf className="h-10 w-10 mx-auto mb-3 opacity-20" aria-hidden="true" />
           <p className="font-medium">No tips found</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <ul className="grid gap-4 sm:grid-cols-2" aria-label={`${tips.length} tip${tips.length !== 1 ? "s" : ""}`}>
           {tips.map(tip => {
             const Icon = CATEGORY_ICONS[tip.category] ?? Leaf;
             return (
-              <Card key={tip.id} className="border-border hover:border-primary/30 transition-colors">
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${CATEGORY_BG[tip.category] ?? "bg-primary/10 text-primary"}`}>
-                      <Icon className="h-4 w-4" />
+              <li key={tip.id}>
+                <Card className="border-border hover:border-primary/30 transition-colors h-full">
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div
+                        className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${CATEGORY_BG[tip.category] ?? "bg-primary/10 text-primary"}`}
+                        aria-hidden="true"
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground leading-tight">{tip.title}</h3>
+                        <span
+                          className={`text-xs font-medium capitalize ${IMPACT_COLORS[tip.impact] ?? "text-muted-foreground"}`}
+                          aria-label={`Impact level: ${tip.impact}`}
+                        >
+                          {tip.impact} impact
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground leading-tight">{tip.title}</h3>
-                      <span className={`text-xs font-medium capitalize ${IMPACT_COLORS[tip.impact] ?? "text-muted-foreground"}`}>
-                        {tip.impact} impact
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{tip.body}</p>
-                </CardContent>
-              </Card>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{tip.body}</p>
+                  </CardContent>
+                </Card>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

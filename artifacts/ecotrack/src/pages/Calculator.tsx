@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScoreRing } from "@/components/ScoreRing";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Loader2, CheckCircle, Car, Bike, Bus, Train, Footprints, Zap, Utensils, Plane } from "lucide-react";
@@ -116,36 +115,47 @@ export default function Calculator() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" aria-label="Carbon footprint calculator">
           <Card className="border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Car className="h-4 w-4" /> Transportation
+                <Car className="h-4 w-4" aria-hidden="true" /> Transportation
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <div>
-                <Label className="text-sm font-medium">Daily distance: <span className="text-primary font-bold">{values.transportKm} km</span></Label>
+                <Label htmlFor="transport-km" className="text-sm font-medium">
+                  Daily distance: <span className="text-primary font-bold" aria-live="polite">{values.transportKm} km</span>
+                </Label>
                 <Slider
+                  id="transport-km"
                   min={0} max={200} step={1}
                   value={[values.transportKm]}
                   onValueChange={([v]) => setValue("transportKm", v)}
                   className="mt-3"
+                  aria-label="Daily transport distance in kilometres"
+                  aria-valuemin={0}
+                  aria-valuemax={200}
+                  aria-valuenow={values.transportKm}
+                  aria-valuetext={`${values.transportKm} kilometres`}
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium mb-2 block">Mode of transport</Label>
-                <div className="grid grid-cols-5 gap-2">
+                <Label className="text-sm font-medium mb-2 block" id="transport-mode-label">Mode of transport</Label>
+                <div className="grid grid-cols-5 gap-2" role="group" aria-labelledby="transport-mode-label">
                   {(["car", "bus", "train", "bike", "walking"] as const).map(mode => {
                     const Icon = TRANSPORT_ICONS[mode];
+                    const isSelected = values.transportMode === mode;
                     return (
                       <button
                         key={mode}
                         type="button"
                         onClick={() => setValue("transportMode", mode)}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs font-medium transition-colors ${values.transportMode === mode ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}
+                        aria-pressed={isSelected}
+                        aria-label={`${mode}${isSelected ? ", selected" : ""}`}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs font-medium transition-colors ${isSelected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}
                       >
-                        <Icon className="h-5 w-5" />
+                        <Icon className="h-5 w-5" aria-hidden="true" />
                         <span className="capitalize text-[10px]">{mode}</span>
                       </button>
                     );
@@ -158,16 +168,24 @@ export default function Calculator() {
           <Card className="border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Zap className="h-4 w-4" /> Electricity
+                <Zap className="h-4 w-4" aria-hidden="true" /> Electricity
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Label className="text-sm font-medium">Monthly usage: <span className="text-primary font-bold">{values.electricityKwh} kWh</span></Label>
+              <Label htmlFor="electricity-kwh" className="text-sm font-medium">
+                Monthly usage: <span className="text-primary font-bold" aria-live="polite">{values.electricityKwh} kWh</span>
+              </Label>
               <Slider
+                id="electricity-kwh"
                 min={0} max={2000} step={10}
                 value={[values.electricityKwh]}
                 onValueChange={([v]) => setValue("electricityKwh", v)}
                 className="mt-3"
+                aria-label="Monthly electricity usage in kilowatt-hours"
+                aria-valuemin={0}
+                aria-valuemax={2000}
+                aria-valuenow={values.electricityKwh}
+                aria-valuetext={`${values.electricityKwh} kilowatt-hours`}
               />
               <p className="text-xs text-muted-foreground mt-2">Avg. US household: ~900 kWh/month</p>
             </CardContent>
@@ -176,49 +194,73 @@ export default function Calculator() {
           <Card className="border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Utensils className="h-4 w-4" /> Diet
+                <Utensils className="h-4 w-4" aria-hidden="true" /> Diet
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-2">
-                {(["vegan", "vegetarian", "omnivore"] as const).map(diet => (
-                  <button
-                    key={diet}
-                    type="button"
-                    onClick={() => setValue("dietType", diet)}
-                    className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${values.dietType === diet ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}
-                  >
-                    <span className="capitalize">{diet}</span>
-                  </button>
-                ))}
-              </div>
+              <fieldset>
+                <legend className="text-sm font-medium mb-2 sr-only">Select your diet type</legend>
+                <div className="grid grid-cols-3 gap-2" role="group" aria-label="Diet type">
+                  {(["vegan", "vegetarian", "omnivore"] as const).map(diet => {
+                    const isSelected = values.dietType === diet;
+                    return (
+                      <button
+                        key={diet}
+                        type="button"
+                        onClick={() => setValue("dietType", diet)}
+                        aria-pressed={isSelected}
+                        aria-label={`${diet} diet${isSelected ? ", selected" : ""}`}
+                        className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${isSelected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}
+                      >
+                        <span className="capitalize">{diet}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
             </CardContent>
           </Card>
 
           <Card className="border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Plane className="h-4 w-4" /> Air Travel
+                <Plane className="h-4 w-4" aria-hidden="true" /> Air Travel
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Label className="text-sm font-medium">Flights per year: <span className="text-primary font-bold">{values.flightsPerYear}</span></Label>
+              <Label htmlFor="flights-per-year" className="text-sm font-medium">
+                Flights per year: <span className="text-primary font-bold" aria-live="polite">{values.flightsPerYear}</span>
+              </Label>
               <Slider
+                id="flights-per-year"
                 min={0} max={50} step={1}
                 value={[values.flightsPerYear]}
                 onValueChange={([v]) => setValue("flightsPerYear", v)}
                 className="mt-3"
+                aria-label="Number of flights per year"
+                aria-valuemin={0}
+                aria-valuemax={50}
+                aria-valuenow={values.flightsPerYear}
+                aria-valuetext={`${values.flightsPerYear} flights`}
               />
             </CardContent>
           </Card>
 
-          <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg" disabled={calculateMutation.isPending}>
-            {calculateMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Calculating...</> : "Calculate My Footprint"}
+          <Button
+            type="submit"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+            size="lg"
+            disabled={calculateMutation.isPending}
+            aria-busy={calculateMutation.isPending}
+          >
+            {calculateMutation.isPending
+              ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" /> Calculating...</>
+              : "Calculate My Footprint"}
           </Button>
         </form>
 
         {/* Result */}
-        <div className="space-y-4">
+        <div className="space-y-4" aria-live="polite" aria-atomic="true">
           {result ? (
             <>
               <Card className="border-border">
@@ -229,7 +271,10 @@ export default function Calculator() {
                   <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold ${rating?.bg} ${rating?.color} mb-2`}>
                     {rating?.label}
                   </div>
-                  <p className="text-3xl font-bold text-foreground">{result.totalKgCo2.toFixed(0)} <span className="text-lg font-normal text-muted-foreground">kg CO₂/yr</span></p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {result.totalKgCo2.toFixed(0)}{" "}
+                    <span className="text-lg font-normal text-muted-foreground">kg CO₂/yr</span>
+                  </p>
                   <p className="text-sm text-muted-foreground mt-1">Global avg: ~4,000 kg/yr</p>
                 </CardContent>
               </Card>
@@ -241,7 +286,17 @@ export default function Calculator() {
                 <CardContent>
                   <ResponsiveContainer width="100%" height={180}>
                     <PieChart>
-                      <Pie data={breakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3}>
+                      <Pie
+                        data={breakdownData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={65}
+                        paddingAngle={3}
+                        aria-label="Carbon footprint breakdown by category"
+                      >
                         {breakdownData.map((_, i) => <Cell key={i} fill={BREAKDOWN_COLORS[i]} />)}
                       </Pie>
                       <Tooltip
@@ -251,19 +306,21 @@ export default function Calculator() {
                       <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="space-y-2 mt-2">
+                  <div className="space-y-2 mt-2" role="list" aria-label="Emissions by category">
                     {[
                       { label: "Transport", value: result.transportKgCo2, color: BREAKDOWN_COLORS[0] },
                       { label: "Electricity", value: result.electricityKgCo2, color: BREAKDOWN_COLORS[1] },
                       { label: "Food", value: result.foodKgCo2, color: BREAKDOWN_COLORS[2] },
                       { label: "Air Travel", value: result.travelKgCo2, color: BREAKDOWN_COLORS[3] },
                     ].map(item => (
-                      <div key={item.label} className="flex items-center justify-between text-sm">
+                      <div key={item.label} className="flex items-center justify-between text-sm" role="listitem">
                         <div className="flex items-center gap-2">
-                          <div className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} />
+                          <div className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} aria-hidden="true" />
                           <span className="text-muted-foreground">{item.label}</span>
                         </div>
-                        <span className="font-medium text-foreground">{item.value.toFixed(1)} kg</span>
+                        <span className="font-medium text-foreground">
+                          <span className="sr-only">{item.label}: </span>{item.value.toFixed(1)} kg
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -271,19 +328,27 @@ export default function Calculator() {
               </Card>
 
               {saved ? (
-                <div className="flex items-center gap-2 justify-center py-3 text-emerald-500 font-medium text-sm">
-                  <CheckCircle className="h-4 w-4" /> Entry saved to your history!
+                <div className="flex items-center gap-2 justify-center py-3 text-emerald-500 font-medium text-sm" role="status">
+                  <CheckCircle className="h-4 w-4" aria-hidden="true" /> Entry saved to your history!
                 </div>
               ) : (
-                <Button onClick={handleSave} variant="outline" className="w-full border-primary text-primary hover:bg-primary/10" disabled={createEntryMutation.isPending}>
-                  {createEntryMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : "Save This Entry"}
+                <Button
+                  onClick={handleSave}
+                  variant="outline"
+                  className="w-full border-primary text-primary hover:bg-primary/10"
+                  disabled={createEntryMutation.isPending}
+                  aria-busy={createEntryMutation.isPending}
+                >
+                  {createEntryMutation.isPending
+                    ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" /> Saving...</>
+                    : "Save This Entry"}
                 </Button>
               )}
             </>
           ) : (
             <Card className="border-border border-dashed h-full min-h-64 flex items-center justify-center">
               <CardContent className="text-center text-muted-foreground p-8">
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3" aria-hidden="true">
                   <Plane className="h-8 w-8 text-primary opacity-50" />
                 </div>
                 <p className="font-medium">Fill in the form and click Calculate</p>

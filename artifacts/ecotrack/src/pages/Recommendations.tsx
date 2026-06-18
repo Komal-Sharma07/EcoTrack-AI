@@ -1,7 +1,6 @@
 import { useListRecommendations, getListRecommendationsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { TrendingDown, Zap, Car, Utensils, Plane, Leaf, Filter } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -45,8 +44,8 @@ export default function Recommendations() {
       </div>
 
       {/* Category filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Filter className="h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Filter recommendations by category">
+        <Filter className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         {CATEGORIES.map(cat => (
           <Button
             key={cat}
@@ -54,6 +53,8 @@ export default function Recommendations() {
             variant={activeCategory === cat ? "default" : "outline"}
             className={activeCategory === cat ? "bg-primary text-primary-foreground" : "text-muted-foreground border-border"}
             onClick={() => setActiveCategory(cat)}
+            aria-pressed={activeCategory === cat}
+            aria-label={`Filter by ${cat === "all" ? "all categories" : cat}`}
           >
             <span className="capitalize">{cat}</span>
           </Button>
@@ -61,47 +62,55 @@ export default function Recommendations() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
+        <div className="space-y-3" aria-busy="true" aria-label="Loading recommendations">
           {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
-          <Leaf className="h-10 w-10 mx-auto mb-3 opacity-20" />
+          <Leaf className="h-10 w-10 mx-auto mb-3 opacity-20" aria-hidden="true" />
           <p className="font-medium">No recommendations found</p>
           <p className="text-sm opacity-70 mt-1">Try a different category</p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <ul className="grid gap-4" aria-label={`${filtered.length} recommendation${filtered.length !== 1 ? "s" : ""}`}>
           {filtered.map(rec => {
             const Icon = CATEGORY_ICONS[rec.category] ?? Leaf;
             return (
-              <Card key={rec.id} className="border-border hover:border-primary/30 transition-colors">
-                <CardContent className="p-5">
-                  <div className="flex gap-4">
-                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${CATEGORY_COLORS[rec.category] ?? "bg-primary/10 text-primary"}`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <h3 className="font-semibold text-foreground leading-tight">{rec.title}</h3>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${DIFFICULTY_COLORS[rec.difficulty]}`}>
-                            {rec.difficulty}
-                          </span>
+              <li key={rec.id}>
+                <Card className="border-border hover:border-primary/30 transition-colors">
+                  <CardContent className="p-5">
+                    <div className="flex gap-4">
+                      <div
+                        className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${CATEGORY_COLORS[rec.category] ?? "bg-primary/10 text-primary"}`}
+                        aria-hidden="true"
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <h3 className="font-semibold text-foreground leading-tight">{rec.title}</h3>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full border ${DIFFICULTY_COLORS[rec.difficulty]}`}
+                              aria-label={`Difficulty: ${rec.difficulty}`}
+                            >
+                              {rec.difficulty}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{rec.description}</p>
+                        <div className="flex items-center gap-1.5 mt-3 text-emerald-500 font-semibold text-sm" aria-label={`Potential saving: up to ${rec.potentialSavingKg.toFixed(0)} kg CO₂ per year`}>
+                          <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                          Save up to {rec.potentialSavingKg.toFixed(0)} kg CO₂/yr
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{rec.description}</p>
-                      <div className="flex items-center gap-1.5 mt-3 text-emerald-500 font-semibold text-sm">
-                        <TrendingDown className="h-4 w-4" />
-                        Save up to {rec.potentialSavingKg.toFixed(0)} kg CO₂/yr
-                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

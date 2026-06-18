@@ -54,7 +54,7 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" aria-busy="true" aria-label="Loading profile">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-48 rounded-xl" />
         <Skeleton className="h-64 rounded-xl" />
@@ -71,24 +71,24 @@ export default function Profile() {
 
       {/* Stats row */}
       {profile && (
-        <div className="grid grid-cols-3 gap-4">
-          <Card className="border-border">
+        <div className="grid grid-cols-3 gap-4" role="list" aria-label="Profile statistics">
+          <Card className="border-border" role="listitem">
             <CardContent className="p-4 flex flex-col items-center text-center">
-              <Flame className="h-6 w-6 text-orange-500 mb-1" />
-              <p className="text-xl font-bold text-foreground">{profile.streakDays}</p>
+              <Flame className="h-6 w-6 text-orange-500 mb-1" aria-hidden="true" />
+              <p className="text-xl font-bold text-foreground" aria-label={`${profile.streakDays} day streak`}>{profile.streakDays}</p>
               <p className="text-xs text-muted-foreground">Day Streak</p>
             </CardContent>
           </Card>
-          <Card className="border-border">
+          <Card className="border-border" role="listitem">
             <CardContent className="p-4 flex flex-col items-center text-center">
-              <Leaf className="h-6 w-6 text-emerald-500 mb-1" />
-              <p className="text-xl font-bold text-foreground">{profile.totalCarbonSaved.toFixed(0)}</p>
+              <Leaf className="h-6 w-6 text-emerald-500 mb-1" aria-hidden="true" />
+              <p className="text-xl font-bold text-foreground" aria-label={`${profile.totalCarbonSaved.toFixed(0)} kg CO₂ saved`}>{profile.totalCarbonSaved.toFixed(0)}</p>
               <p className="text-xs text-muted-foreground">kg CO₂ Saved</p>
             </CardContent>
           </Card>
-          <Card className="border-border">
+          <Card className="border-border" role="listitem">
             <CardContent className="p-4 flex flex-col items-center text-center">
-              <User className="h-6 w-6 text-primary mb-1" />
+              <User className="h-6 w-6 text-primary mb-1" aria-hidden="true" />
               <p className="text-sm font-semibold text-foreground capitalize">{profile.dietType}</p>
               <p className="text-xs text-muted-foreground">Diet Type</p>
             </CardContent>
@@ -102,7 +102,7 @@ export default function Profile() {
           <CardTitle className="text-base font-semibold">Edit Profile</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" aria-label="Edit profile form" noValidate>
             <div>
               <Label htmlFor="name" className="text-sm font-medium">Name</Label>
               <Input
@@ -110,8 +110,14 @@ export default function Profile() {
                 {...register("name")}
                 placeholder="Your name"
                 className="mt-1.5 border-border"
+                aria-required="true"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? "name-error" : undefined}
+                autoComplete="name"
               />
-              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
+              {errors.name && (
+                <p id="name-error" className="text-xs text-destructive mt-1" role="alert">{errors.name.message}</p>
+              )}
             </div>
 
             <div>
@@ -122,37 +128,51 @@ export default function Profile() {
                 {...register("email")}
                 placeholder="you@example.com"
                 className="mt-1.5 border-border"
+                aria-required="true"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "email-error" : undefined}
+                autoComplete="email"
               />
-              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
+              {errors.email && (
+                <p id="email-error" className="text-xs text-destructive mt-1" role="alert">{errors.email.message}</p>
+              )}
             </div>
 
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Diet Type</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["vegan", "vegetarian", "omnivore"] as const).map(diet => (
-                  <button
-                    key={diet}
-                    type="button"
-                    onClick={() => setValue("dietType", diet)}
-                    className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${dietType === diet ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}
-                  >
-                    <span className="capitalize">{diet}</span>
-                  </button>
-                ))}
+            <fieldset>
+              <legend className="text-sm font-medium mb-2 block">Diet Type</legend>
+              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Select diet type">
+                {(["vegan", "vegetarian", "omnivore"] as const).map(diet => {
+                  const isSelected = dietType === diet;
+                  return (
+                    <button
+                      key={diet}
+                      type="button"
+                      onClick={() => setValue("dietType", diet)}
+                      aria-pressed={isSelected}
+                      aria-label={`${diet} diet${isSelected ? ", currently selected" : ""}`}
+                      className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${isSelected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}
+                    >
+                      <span className="capitalize">{diet}</span>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
+            </fieldset>
 
             <div className="flex items-center gap-3 pt-2">
               <Button
                 type="submit"
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
                 disabled={updateMutation.isPending}
+                aria-busy={updateMutation.isPending}
               >
-                {updateMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : "Save Changes"}
+                {updateMutation.isPending
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" /> Saving...</>
+                  : "Save Changes"}
               </Button>
               {updateMutation.isSuccess && (
-                <div className="flex items-center gap-1.5 text-emerald-500 text-sm font-medium">
-                  <CheckCircle className="h-4 w-4" /> Saved!
+                <div className="flex items-center gap-1.5 text-emerald-500 text-sm font-medium" role="status" aria-live="polite">
+                  <CheckCircle className="h-4 w-4" aria-hidden="true" /> Saved!
                 </div>
               )}
             </div>
@@ -161,7 +181,9 @@ export default function Profile() {
       </Card>
 
       {profile && (
-        <p className="text-xs text-muted-foreground">Member since {new Date(profile.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
+        <p className="text-xs text-muted-foreground">
+          Member since {new Date(profile.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </p>
       )}
     </div>
   );

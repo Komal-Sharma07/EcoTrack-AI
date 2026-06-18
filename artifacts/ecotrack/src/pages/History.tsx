@@ -22,13 +22,13 @@ export default function History() {
   const [trendPeriod, setTrendPeriod] = useState<"week" | "month">("month");
 
   const { data: entries, isLoading } = useListEntries(
-    { query: { queryKey: getListEntriesQueryKey({ period }) } },
-    { period }
+    { period },
+    { query: { queryKey: getListEntriesQueryKey({ period }) } }
   );
 
   const { data: trend } = useGetCarbonTrend(
-    { query: { queryKey: getTrendKey({ period: trendPeriod }) } },
-    { period: trendPeriod }
+    { period: trendPeriod },
+    { query: { queryKey: getTrendKey({ period: trendPeriod }) } }
   );
 
   const deleteMutation = useDeleteEntry({
@@ -53,9 +53,9 @@ export default function History() {
       <Card className="border-border">
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <BarChart2 className="h-4 w-4 text-primary" /> Carbon Trend
+            <BarChart2 className="h-4 w-4 text-primary" aria-hidden="true" /> Carbon Trend
           </CardTitle>
-          <div className="flex gap-1">
+          <div className="flex gap-1" role="group" aria-label="Trend chart period">
             {(["week", "month"] as const).map(p => (
               <Button
                 key={p}
@@ -63,6 +63,8 @@ export default function History() {
                 variant={trendPeriod === p ? "default" : "ghost"}
                 className={trendPeriod === p ? "bg-primary text-primary-foreground h-7 text-xs" : "h-7 text-xs"}
                 onClick={() => setTrendPeriod(p)}
+                aria-pressed={trendPeriod === p}
+                aria-label={`Show ${p === "week" ? "weekly" : "monthly"} trend`}
               >
                 {p === "week" ? "Weekly" : "Monthly"}
               </Button>
@@ -71,20 +73,22 @@ export default function History() {
         </CardHeader>
         <CardContent>
           {trend && trend.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={trend} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
-                />
-                <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
-                <Bar dataKey="transportKgCo2" name="Transport" fill="#3b82f6" radius={[3, 3, 0, 0]} stackId="a" />
-                <Bar dataKey="electricityKgCo2" name="Electricity" fill="#f59e0b" radius={[0, 0, 0, 0]} stackId="a" />
-                <Bar dataKey="foodKgCo2" name="Food" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" />
-                <Bar dataKey="travelKgCo2" name="Travel" fill="#8b5cf6" radius={[3, 3, 0, 0]} stackId="a" />
-              </BarChart>
-            </ResponsiveContainer>
+            <figure aria-label={`Carbon trend chart — ${trendPeriod === "week" ? "weekly" : "monthly"} view`}>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={trend} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                  />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
+                  <Bar dataKey="transportKgCo2" name="Transport" fill="#3b82f6" radius={[3, 3, 0, 0]} stackId="a" />
+                  <Bar dataKey="electricityKgCo2" name="Electricity" fill="#f59e0b" radius={[0, 0, 0, 0]} stackId="a" />
+                  <Bar dataKey="foodKgCo2" name="Food" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" />
+                  <Bar dataKey="travelKgCo2" name="Travel" fill="#8b5cf6" radius={[3, 3, 0, 0]} stackId="a" />
+                </BarChart>
+              </ResponsiveContainer>
+            </figure>
           ) : (
             <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">No data yet</div>
           )}
@@ -94,8 +98,8 @@ export default function History() {
       {/* Entry list */}
       <Card className="border-border">
         <CardHeader className="pb-2 flex flex-row items-center justify-between flex-wrap gap-2">
-          <CardTitle className="text-base font-semibold">Log Entries</CardTitle>
-          <div className="flex gap-1">
+          <CardTitle className="text-base font-semibold" id="log-entries-heading">Log Entries</CardTitle>
+          <div className="flex gap-1" role="group" aria-label="Filter entries by period">
             {PERIOD_OPTIONS.map(opt => (
               <Button
                 key={opt.value}
@@ -103,6 +107,8 @@ export default function History() {
                 variant={period === opt.value ? "default" : "ghost"}
                 className={period === opt.value ? "bg-primary text-primary-foreground h-7 text-xs" : "h-7 text-xs text-muted-foreground"}
                 onClick={() => setPeriod(opt.value)}
+                aria-pressed={period === opt.value}
+                aria-label={`Show entries for ${opt.label.toLowerCase()}`}
               >
                 {opt.label}
               </Button>
@@ -111,12 +117,12 @@ export default function History() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-3" aria-busy="true" aria-label="Loading entries">
               {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
             </div>
           ) : !entries || entries.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              <Leaf className="h-10 w-10 mx-auto mb-3 opacity-20" />
+              <Leaf className="h-10 w-10 mx-auto mb-3 opacity-20" aria-hidden="true" />
               <p className="font-medium">No entries for this period</p>
               <p className="text-sm mt-1 opacity-70">Try a different time range or log a new entry</p>
               <Link href="/calculator">
@@ -124,11 +130,11 @@ export default function History() {
               </Link>
             </div>
           ) : (
-            <div className="space-y-2">
+            <ul className="space-y-2" aria-labelledby="log-entries-heading">
               {entries.map(entry => (
-                <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                <li key={entry.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0" aria-hidden="true">
                       <Leaf className="h-4 w-4 text-primary" />
                     </div>
                     <div>
@@ -147,13 +153,14 @@ export default function History() {
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
                       onClick={() => deleteMutation.mutate({ id: entry.id })}
                       disabled={deleteMutation.isPending}
+                      aria-label={`Delete entry from ${entry.date}`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </CardContent>
       </Card>

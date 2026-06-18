@@ -19,9 +19,9 @@ function getRatingLabel(score: number) {
 
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats({ query: { queryKey: getGetDashboardStatsQueryKey() } });
-  const { data: trend, isLoading: trendLoading } = useGetCarbonTrend({ query: { queryKey: getGetCarbonTrendQueryKey({ period: "month" }) } }, { period: "month" });
+  const { data: trend, isLoading: trendLoading } = useGetCarbonTrend({ period: "month" }, { query: { queryKey: getGetCarbonTrendQueryKey({ period: "month" }) } });
   const { data: breakdown, isLoading: breakdownLoading } = useGetFootprintBreakdown({ query: { queryKey: getGetFootprintBreakdownQueryKey() } });
-  const { data: entries } = useListEntries({ query: { queryKey: getListEntriesQueryKey() } });
+  const { data: entries } = useListEntries(undefined, { query: { queryKey: getListEntriesQueryKey() } });
 
   const rating = stats ? getRatingLabel(stats.carbonScore) : null;
   const recentEntries = entries?.slice(0, 5) ?? [];
