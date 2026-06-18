@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "EcoTrack AI"
+version = "1.0.0"
+id = "artifacts/ecotrack"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26039
+
+[services.development]
+run = "pnpm --filter @workspace/ecotrack run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ecotrack", "run", "build" ]
+publicDir = "artifacts/ecotrack/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26039"
+BASE_PATH = "/"

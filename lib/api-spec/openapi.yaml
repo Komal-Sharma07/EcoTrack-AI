@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: EcoTrack AI API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: profile
+    description: User profile operations
+  - name: footprint
+    description: Carbon footprint calculations
+  - name: entries
+    description: Footprint log entries
+  - name: recommendations
+    description: Personalized recommendations
+  - name: badges
+    description: Gamification badges
+  - name: tips
+    description: Sustainability tips
+  - name: stats
+    description: Dashboard stats and aggregates
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +37,443 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    put:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileInput"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /footprint/calculate:
+    post:
+      operationId: calculateFootprint
+      tags: [footprint]
+      summary: Calculate carbon footprint from activity inputs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FootprintInput"
+      responses:
+        "200":
+          description: Calculated footprint result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FootprintResult"
+
+  /entries:
+    get:
+      operationId: listEntries
+      tags: [entries]
+      summary: List all footprint log entries
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, year]
+          description: Filter by time period
+      responses:
+        "200":
+          description: List of entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Entry"
+    post:
+      operationId: createEntry
+      tags: [entries]
+      summary: Log a new footprint entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntryInput"
+      responses:
+        "201":
+          description: Created entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entry"
+
+  /entries/{id}:
+    delete:
+      operationId: deleteEntry
+      tags: [entries]
+      summary: Delete a footprint entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /recommendations:
+    get:
+      operationId: listRecommendations
+      tags: [recommendations]
+      summary: Get personalized recommendations
+      responses:
+        "200":
+          description: List of recommendations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Recommendation"
+
+  /badges:
+    get:
+      operationId: listBadges
+      tags: [badges]
+      summary: Get user badges and achievements
+      responses:
+        "200":
+          description: List of badges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Badge"
+
+  /tips:
+    get:
+      operationId: listTips
+      tags: [tips]
+      summary: Get sustainability tips
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [transport, energy, food, travel, general]
+      responses:
+        "200":
+          description: List of tips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tip"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /stats/trend:
+    get:
+      operationId: getCarbonTrend
+      tags: [stats]
+      summary: Get carbon footprint trend data (weekly/monthly)
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month]
+          description: Trend period
+      responses:
+        "200":
+          description: Trend data points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrendPoint"
+
+  /stats/breakdown:
+    get:
+      operationId: getFootprintBreakdown
+      tags: [stats]
+      summary: Get footprint breakdown by category
+      responses:
+        "200":
+          description: Category breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BreakdownItem"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    Profile:
+      type: object
+      required: [id, name, email, dietType, streakDays, totalCarbonSaved, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        dietType:
+          type: string
+          enum: [vegan, vegetarian, omnivore]
+        streakDays:
+          type: integer
+        totalCarbonSaved:
+          type: number
+        createdAt:
+          type: string
+
+    ProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        dietType:
+          type: string
+          enum: [vegan, vegetarian, omnivore]
+        avatarUrl:
+          type: ["string", "null"]
+
+    FootprintInput:
+      type: object
+      required: [transportKm, transportMode, electricityKwh, dietType, flightsPerYear]
+      properties:
+        transportKm:
+          type: number
+          description: Daily km travelled
+        transportMode:
+          type: string
+          enum: [car, bike, bus, train, walking]
+        electricityKwh:
+          type: number
+          description: Monthly electricity usage in kWh
+        dietType:
+          type: string
+          enum: [vegan, vegetarian, omnivore]
+        flightsPerYear:
+          type: integer
+          description: Number of flights per year
+
+    FootprintResult:
+      type: object
+      required: [totalKgCo2, transportKgCo2, electricityKgCo2, foodKgCo2, travelKgCo2, score, rating]
+      properties:
+        totalKgCo2:
+          type: number
+        transportKgCo2:
+          type: number
+        electricityKgCo2:
+          type: number
+        foodKgCo2:
+          type: number
+        travelKgCo2:
+          type: number
+        score:
+          type: integer
+          description: Score from 0-100, higher is greener
+        rating:
+          type: string
+          enum: [excellent, good, average, poor, critical]
+
+    Entry:
+      type: object
+      required: [id, date, totalKgCo2, transportKgCo2, electricityKgCo2, foodKgCo2, travelKgCo2, transportMode, dietType, score]
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        totalKgCo2:
+          type: number
+        transportKgCo2:
+          type: number
+        electricityKgCo2:
+          type: number
+        foodKgCo2:
+          type: number
+        travelKgCo2:
+          type: number
+        transportMode:
+          type: string
+        dietType:
+          type: string
+        score:
+          type: integer
+
+    EntryInput:
+      type: object
+      required: [transportKm, transportMode, electricityKwh, dietType, flightsPerYear]
+      properties:
+        transportKm:
+          type: number
+        transportMode:
+          type: string
+          enum: [car, bike, bus, train, walking]
+        electricityKwh:
+          type: number
+        dietType:
+          type: string
+          enum: [vegan, vegetarian, omnivore]
+        flightsPerYear:
+          type: integer
+        notes:
+          type: ["string", "null"]
+
+    Recommendation:
+      type: object
+      required: [id, category, title, description, potentialSavingKg, difficulty, priority]
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+          enum: [transport, energy, food, travel, general]
+        title:
+          type: string
+        description:
+          type: string
+        potentialSavingKg:
+          type: number
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        priority:
+          type: integer
+
+    Badge:
+      type: object
+      required: [id, name, description, icon, category, earned, earnedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        category:
+          type: string
+        earned:
+          type: boolean
+        earnedAt:
+          type: ["string", "null"]
+
+    Tip:
+      type: object
+      required: [id, category, title, body, impact]
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        impact:
+          type: string
+          enum: [low, medium, high]
+
+    DashboardStats:
+      type: object
+      required: [currentMonthKgCo2, previousMonthKgCo2, percentChange, weeklyAvgKgCo2, carbonScore, streakDays, badgesEarned, totalEntries]
+      properties:
+        currentMonthKgCo2:
+          type: number
+        previousMonthKgCo2:
+          type: number
+        percentChange:
+          type: number
+        weeklyAvgKgCo2:
+          type: number
+        carbonScore:
+          type: integer
+        streakDays:
+          type: integer
+        badgesEarned:
+          type: integer
+        totalEntries:
+          type: integer
+
+    TrendPoint:
+      type: object
+      required: [label, totalKgCo2, transportKgCo2, electricityKgCo2, foodKgCo2, travelKgCo2]
+      properties:
+        label:
+          type: string
+        totalKgCo2:
+          type: number
+        transportKgCo2:
+          type: number
+        electricityKgCo2:
+          type: number
+        foodKgCo2:
+          type: number
+        travelKgCo2:
+          type: number
+
+    BreakdownItem:
+      type: object
+      required: [category, kgCo2, percentage, color]
+      properties:
+        category:
+          type: string
+        kgCo2:
+          type: number
+        percentage:
+          type: number
+        color:
+          type: string
