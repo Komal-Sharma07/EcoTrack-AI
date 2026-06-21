@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, gte } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db, entriesTable, profileTable, badgesTable } from "@workspace/db";
 import {
   GetDashboardStatsResponse,
@@ -9,6 +9,18 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+/** Rounds a number to one decimal place. */
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/** CO2 numeric fields present on every entry row. */
+type Co2Field = "totalKgCo2" | "transportKgCo2" | "electricityKgCo2" | "foodKgCo2" | "travelKgCo2";
+
+/** Sums a specific CO2 field across an array of entry rows. */
+const sumField = (
+  entries: Array<Record<Co2Field, number>>,
+  field: Co2Field,
+) => entries.reduce((acc, e) => acc + e[field], 0);
 
 router.get("/stats/dashboard", async (req, res): Promise<void> => {
   const now = new Date();
@@ -23,33 +35,35 @@ router.get("/stats/dashboard", async (req, res): Promise<void> => {
   const lastMonthEntries = allEntries.filter(e => e.date >= lastMonthStart && e.date <= lastMonthEnd);
   const weekEntries = allEntries.filter(e => e.date >= weekAgo);
 
-  const currentMonthKgCo2 = thisMonthEntries.reduce((sum, e) => sum + e.totalKgCo2, 0);
-  const previousMonthKgCo2 = lastMonthEntries.reduce((sum, e) => sum + e.totalKgCo2, 0);
+  const currentMonthKgCo2 = sumField(thisMonthEntries, "totalKgCo2");
+  const previousMonthKgCo2 = sumField(lastMonthEntries, "totalKgCo2");
 
   const percentChange = previousMonthKgCo2 > 0
     ? ((currentMonthKgCo2 - previousMonthKgCo2) / previousMonthKgCo2) * 100
     : 0;
 
   const weeklyAvgKgCo2 = weekEntries.length > 0
-    ? weekEntries.reduce((sum, e) => sum + e.totalKgCo2, 0) / weekEntries.length
+    ? sumField(weekEntries, "totalKgCo2") / weekEntries.length
     : 0;
 
+  // Average score of the most recent 5 entries; default to 50 when no data.
   const carbonScore = allEntries.length > 0
-    ? Math.round(allEntries.slice(0, 5).reduce((sum, e) => sum + e.score, 0) / Math.min(5, allEntries.length))
+    ? Math.round(
+        allEntries.slice(0, 5).reduce((sum, e) => sum + e.score, 0) /
+        Math.min(5, allEntries.length),
+      )
     : 50;
 
   const [profile] = await db.select().from(profileTable).limit(1);
   const streakDays = profile?.streakDays ?? 0;
 
-  const earnedBadges = await db.select().from(badgesTable).where(
-    (await import("drizzle-orm")).eq(badgesTable.earned, true)
-  );
+  const earnedBadges = await db.select().from(badgesTable).where(eq(badgesTable.earned, true));
 
   res.json(GetDashboardStatsResponse.parse({
-    currentMonthKgCo2: Math.round(currentMonthKgCo2 * 10) / 10,
-    previousMonthKgCo2: Math.round(previousMonthKgCo2 * 10) / 10,
-    percentChange: Math.round(percentChange * 10) / 10,
-    weeklyAvgKgCo2: Math.round(weeklyAvgKgCo2 * 10) / 10,
+    currentMonthKgCo2: round1(currentMonthKgCo2),
+    previousMonthKgCo2: round1(previousMonthKgCo2),
+    percentChange: round1(percentChange),
+    weeklyAvgKgCo2: round1(weeklyAvgKgCo2),
     carbonScore,
     streakDays,
     badgesEarned: earnedBadges.length,
@@ -65,6 +79,7 @@ router.get("/stats/trend", async (req, res): Promise<void> => {
   const points: { label: string; date: string }[] = [];
 
   if (period === "week") {
+    // Last 7 days, oldest first
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       points.push({
@@ -73,6 +88,7 @@ router.get("/stats/trend", async (req, res): Promise<void> => {
       });
     }
   } else {
+    // Last 6 calendar months, oldest first
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       points.push({
@@ -85,24 +101,17 @@ router.get("/stats/trend", async (req, res): Promise<void> => {
   const allEntries = await db.select().from(entriesTable).orderBy(desc(entriesTable.date));
 
   const result = points.map(point => {
-    let matchingEntries;
-    if (period === "week") {
-      matchingEntries = allEntries.filter(e => e.date === point.date);
-    } else {
-      const yearMonth = point.date.slice(0, 7);
-      matchingEntries = allEntries.filter(e => e.date.startsWith(yearMonth));
-    }
-
-    const sum = (field: keyof typeof allEntries[0]) =>
-      matchingEntries.reduce((acc, e) => acc + (Number(e[field]) || 0), 0);
+    const matchingEntries = period === "week"
+      ? allEntries.filter(e => e.date === point.date)
+      : allEntries.filter(e => e.date.startsWith(point.date.slice(0, 7)));
 
     return {
       label: point.label,
-      totalKgCo2: Math.round(sum("totalKgCo2") * 10) / 10,
-      transportKgCo2: Math.round(sum("transportKgCo2") * 10) / 10,
-      electricityKgCo2: Math.round(sum("electricityKgCo2") * 10) / 10,
-      foodKgCo2: Math.round(sum("foodKgCo2") * 10) / 10,
-      travelKgCo2: Math.round(sum("travelKgCo2") * 10) / 10,
+      totalKgCo2: round1(sumField(matchingEntries, "totalKgCo2")),
+      transportKgCo2: round1(sumField(matchingEntries, "transportKgCo2")),
+      electricityKgCo2: round1(sumField(matchingEntries, "electricityKgCo2")),
+      foodKgCo2: round1(sumField(matchingEntries, "foodKgCo2")),
+      travelKgCo2: round1(sumField(matchingEntries, "travelKgCo2")),
     };
   });
 
@@ -111,29 +120,33 @@ router.get("/stats/trend", async (req, res): Promise<void> => {
 
 router.get("/stats/breakdown", async (req, res): Promise<void> => {
   const entries = await db.select().from(entriesTable).orderBy(desc(entriesTable.date));
+  // Use up to the 30 most recent entries for the breakdown
   const recent = entries.slice(0, 30);
 
   if (recent.length === 0) {
     res.json(GetFootprintBreakdownResponse.parse([
-      { category: "Transport", kgCo2: 0, percentage: 0, color: "#3b82f6" },
+      { category: "Transport",   kgCo2: 0, percentage: 0, color: "#3b82f6" },
       { category: "Electricity", kgCo2: 0, percentage: 0, color: "#f59e0b" },
-      { category: "Food", kgCo2: 0, percentage: 0, color: "#10b981" },
-      { category: "Travel", kgCo2: 0, percentage: 0, color: "#8b5cf6" },
+      { category: "Food",        kgCo2: 0, percentage: 0, color: "#10b981" },
+      { category: "Travel",      kgCo2: 0, percentage: 0, color: "#8b5cf6" },
     ]));
     return;
   }
 
-  const transport = recent.reduce((s, e) => s + e.transportKgCo2, 0);
-  const electricity = recent.reduce((s, e) => s + e.electricityKgCo2, 0);
-  const food = recent.reduce((s, e) => s + e.foodKgCo2, 0);
-  const travel = recent.reduce((s, e) => s + e.travelKgCo2, 0);
+  const transport   = sumField(recent, "transportKgCo2");
+  const electricity = sumField(recent, "electricityKgCo2");
+  const food        = sumField(recent, "foodKgCo2");
+  const travel      = sumField(recent, "travelKgCo2");
+  // Guard against division by zero when all values are 0
   const total = transport + electricity + food + travel || 1;
 
+  const pct = (v: number) => round1((v / total) * 100);
+
   const breakdown = [
-    { category: "Transport", kgCo2: Math.round(transport * 10) / 10, percentage: Math.round((transport / total) * 1000) / 10, color: "#3b82f6" },
-    { category: "Electricity", kgCo2: Math.round(electricity * 10) / 10, percentage: Math.round((electricity / total) * 1000) / 10, color: "#f59e0b" },
-    { category: "Food", kgCo2: Math.round(food * 10) / 10, percentage: Math.round((food / total) * 1000) / 10, color: "#10b981" },
-    { category: "Travel", kgCo2: Math.round(travel * 10) / 10, percentage: Math.round((travel / total) * 1000) / 10, color: "#8b5cf6" },
+    { category: "Transport",   kgCo2: round1(transport),   percentage: pct(transport),   color: "#3b82f6" },
+    { category: "Electricity", kgCo2: round1(electricity), percentage: pct(electricity), color: "#f59e0b" },
+    { category: "Food",        kgCo2: round1(food),        percentage: pct(food),        color: "#10b981" },
+    { category: "Travel",      kgCo2: round1(travel),      percentage: pct(travel),      color: "#8b5cf6" },
   ];
 
   res.json(GetFootprintBreakdownResponse.parse(breakdown));

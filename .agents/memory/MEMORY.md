@@ -1,0 +1,2 @@
+- [EcoTrack shared frontend utilities](ecotrack-shared-utils.md) — carbon-display.ts is the single source for CATEGORY_CHART_COLORS, CATEGORY_ICONS, CATEGORY_BG, getRatingInfo, CHART_CONTENT_STYLE, CHART_LABEL_STYLE.
+- [EcoTrack test and typecheck commands](ecotrack-validation.md) — commands to run tests and typecheck for both artifacts.

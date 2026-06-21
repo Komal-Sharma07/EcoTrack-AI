@@ -1,4 +1,13 @@
-import { useGetDashboardStats, getGetDashboardStatsQueryKey, useGetCarbonTrend, getGetCarbonTrendQueryKey, useGetFootprintBreakdown, getGetFootprintBreakdownQueryKey, useListEntries, getListEntriesQueryKey } from "@workspace/api-client-react";
+import {
+  useGetDashboardStats,
+  getGetDashboardStatsQueryKey,
+  useGetCarbonTrend,
+  getGetCarbonTrendQueryKey,
+  useGetFootprintBreakdown,
+  getGetFootprintBreakdownQueryKey,
+  useListEntries,
+  getListEntriesQueryKey,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingDown, TrendingUp, Flame, Leaf, Award, BarChart2 } from "lucide-react";
@@ -6,16 +15,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, 
 import { ScoreRing } from "@/components/ScoreRing";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-
-const COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#8b5cf6"];
-
-function getRatingLabel(score: number) {
-  if (score >= 80) return { label: "Excellent", color: "text-emerald-500" };
-  if (score >= 60) return { label: "Good", color: "text-teal-500" };
-  if (score >= 40) return { label: "Average", color: "text-yellow-500" };
-  if (score >= 20) return { label: "Poor", color: "text-orange-500" };
-  return { label: "Critical", color: "text-red-500" };
-}
+import { getRatingInfo, CATEGORY_CHART_COLORS, CHART_CONTENT_STYLE, CHART_LABEL_STYLE } from "@/lib/carbon-display";
 
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats({ query: { queryKey: getGetDashboardStatsQueryKey() } });
@@ -23,7 +23,7 @@ export default function Dashboard() {
   const { data: breakdown, isLoading: breakdownLoading } = useGetFootprintBreakdown({ query: { queryKey: getGetFootprintBreakdownQueryKey() } });
   const { data: entries } = useListEntries(undefined, { query: { queryKey: getListEntriesQueryKey() } });
 
-  const rating = stats ? getRatingLabel(stats.carbonScore) : null;
+  const rating = stats ? getRatingInfo(stats.carbonScore) : null;
   const recentEntries = entries?.slice(0, 5) ?? [];
 
   return (
@@ -110,10 +110,7 @@ export default function Dashboard() {
                   </defs>
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
-                    labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-                  />
+                  <Tooltip contentStyle={CHART_CONTENT_STYLE} labelStyle={CHART_LABEL_STYLE} />
                   <Area type="monotone" dataKey="totalKgCo2" stroke="#10b981" strokeWidth={2} fill="url(#gradTotal)" name="Total CO₂ (kg)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -140,12 +137,12 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={breakdown} dataKey="kgCo2" nameKey="category" cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3}>
-                    {breakdown.map((entry, index) => (
-                      <Cell key={entry.category} fill={entry.color || COLORS[index % COLORS.length]} />
+                    {breakdown.map((item, index) => (
+                      <Cell key={item.category} fill={item.color || CATEGORY_CHART_COLORS[index % CATEGORY_CHART_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                    contentStyle={CHART_CONTENT_STYLE}
                     formatter={(value: number) => [`${value.toFixed(1)} kg CO₂`, ""]}
                   />
                   <Legend iconType="circle" iconSize={8} formatter={(value) => <span style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>{value}</span>} />

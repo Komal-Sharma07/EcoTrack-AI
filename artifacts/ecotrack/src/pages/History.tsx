@@ -1,34 +1,44 @@
 import { useState } from "react";
-import { useListEntries, getListEntriesQueryKey, useDeleteEntry, getGetDashboardStatsQueryKey, getGetCarbonTrendQueryKey, getGetFootprintBreakdownQueryKey, useGetCarbonTrend, getGetCarbonTrendQueryKey as getTrendKey } from "@workspace/api-client-react";
+import {
+  useListEntries,
+  getListEntriesQueryKey,
+  useDeleteEntry,
+  getGetDashboardStatsQueryKey,
+  getGetCarbonTrendQueryKey,
+  getGetFootprintBreakdownQueryKey,
+  useGetCarbonTrend,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trash2, Leaf, BarChart2 } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Link } from "wouter";
+import { CHART_CONTENT_STYLE } from "@/lib/carbon-display";
 
 const PERIOD_OPTIONS = [
-  { label: "This Week", value: "week" },
+  { label: "This Week",  value: "week"  },
   { label: "This Month", value: "month" },
-  { label: "This Year", value: "year" },
+  { label: "This Year",  value: "year"  },
 ] as const;
 
 type Period = "week" | "month" | "year";
+type TrendPeriod = "week" | "month";
 
 export default function History() {
   const queryClient = useQueryClient();
-  const [period, setPeriod] = useState<Period>("month");
-  const [trendPeriod, setTrendPeriod] = useState<"week" | "month">("month");
+  const [period, setPeriod]           = useState<Period>("month");
+  const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>("month");
 
   const { data: entries, isLoading } = useListEntries(
     { period },
-    { query: { queryKey: getListEntriesQueryKey({ period }) } }
+    { query: { queryKey: getListEntriesQueryKey({ period }) } },
   );
 
   const { data: trend } = useGetCarbonTrend(
     { period: trendPeriod },
-    { query: { queryKey: getTrendKey({ period: trendPeriod }) } }
+    { query: { queryKey: getGetCarbonTrendQueryKey({ period: trendPeriod }) } },
   );
 
   const deleteMutation = useDeleteEntry({
@@ -78,14 +88,12 @@ export default function History() {
                 <BarChart data={trend} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
-                  />
+                  <Tooltip contentStyle={CHART_CONTENT_STYLE} />
                   <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
-                  <Bar dataKey="transportKgCo2" name="Transport" fill="#3b82f6" radius={[3, 3, 0, 0]} stackId="a" />
+                  <Bar dataKey="transportKgCo2"   name="Transport"   fill="#3b82f6" radius={[3, 3, 0, 0]} stackId="a" />
                   <Bar dataKey="electricityKgCo2" name="Electricity" fill="#f59e0b" radius={[0, 0, 0, 0]} stackId="a" />
-                  <Bar dataKey="foodKgCo2" name="Food" fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" />
-                  <Bar dataKey="travelKgCo2" name="Travel" fill="#8b5cf6" radius={[3, 3, 0, 0]} stackId="a" />
+                  <Bar dataKey="foodKgCo2"        name="Food"        fill="#10b981" radius={[0, 0, 0, 0]} stackId="a" />
+                  <Bar dataKey="travelKgCo2"      name="Travel"      fill="#8b5cf6" radius={[3, 3, 0, 0]} stackId="a" />
                 </BarChart>
               </ResponsiveContainer>
             </figure>

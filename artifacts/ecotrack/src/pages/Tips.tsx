@@ -2,33 +2,18 @@ import { useState } from "react";
 import { useListTips, getListTipsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Car, Zap, Utensils, Plane, Leaf, Filter } from "lucide-react";
+import { Leaf, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CATEGORY_ICONS, CATEGORY_BG } from "@/lib/carbon-display";
+
+const IMPACT_COLORS: Record<string, string> = {
+  low:    "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  medium: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+  high:   "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+};
 
 const CATEGORIES = ["all", "transport", "energy", "food", "travel", "general"] as const;
 type Category = typeof CATEGORIES[number];
-
-const CATEGORY_ICONS: Record<string, React.FC<{ className?: string }>> = {
-  transport: Car,
-  energy: Zap,
-  food: Utensils,
-  travel: Plane,
-  general: Leaf,
-};
-
-const IMPACT_COLORS: Record<string, string> = {
-  low: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  medium: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-  high: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-};
-
-const CATEGORY_BG: Record<string, string> = {
-  transport: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  energy: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-  food: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  travel: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-  general: "bg-primary/10 text-primary",
-};
 
 export default function Tips() {
   const [category, setCategory] = useState<Category>("all");
@@ -36,7 +21,7 @@ export default function Tips() {
   const apiCategory = category === "all" ? undefined : category;
   const { data: tips, isLoading } = useListTips(
     apiCategory ? { category: apiCategory } : {},
-    { query: { queryKey: getListTipsQueryKey(apiCategory ? { category: apiCategory } : {}) } }
+    { query: { queryKey: getListTipsQueryKey(apiCategory ? { category: apiCategory } : {}) } },
   );
 
   return (

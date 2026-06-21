@@ -1,30 +1,15 @@
+import { useState } from "react";
 import { useListRecommendations, getListRecommendationsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingDown, Zap, Car, Utensils, Plane, Leaf, Filter } from "lucide-react";
-import { useState } from "react";
+import { TrendingDown, Leaf, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const CATEGORY_ICONS: Record<string, React.FC<{ className?: string }>> = {
-  transport: Car,
-  energy: Zap,
-  food: Utensils,
-  travel: Plane,
-  general: Leaf,
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  transport: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  energy: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-  food: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  travel: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-  general: "bg-primary/10 text-primary",
-};
+import { CATEGORY_ICONS, CATEGORY_BG } from "@/lib/carbon-display";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
+  easy:   "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800",
   medium: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
-  hard: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
+  hard:   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
 };
 
 const CATEGORIES = ["all", "transport", "energy", "food", "travel", "general"] as const;
@@ -81,7 +66,7 @@ export default function Recommendations() {
                   <CardContent className="p-5">
                     <div className="flex gap-4">
                       <div
-                        className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${CATEGORY_COLORS[rec.category] ?? "bg-primary/10 text-primary"}`}
+                        className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${CATEGORY_BG[rec.category] ?? "bg-primary/10 text-primary"}`}
                         aria-hidden="true"
                       >
                         <Icon className="h-5 w-5" />

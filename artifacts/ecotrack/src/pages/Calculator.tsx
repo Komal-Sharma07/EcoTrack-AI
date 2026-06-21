@@ -2,7 +2,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useCalculateFootprint, useCreateEntry, getListEntriesQueryKey, getGetDashboardStatsQueryKey, getGetCarbonTrendQueryKey, getGetFootprintBreakdownQueryKey } from "@workspace/api-client-react";
+import {
+  useCalculateFootprint,
+  useCreateEntry,
+  getListEntriesQueryKey,
+  getGetDashboardStatsQueryKey,
+  getGetCarbonTrendQueryKey,
+  getGetFootprintBreakdownQueryKey,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,50 +18,59 @@ import { Slider } from "@/components/ui/slider";
 import { ScoreRing } from "@/components/ScoreRing";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Loader2, CheckCircle, Car, Bike, Bus, Train, Footprints, Zap, Utensils, Plane } from "lucide-react";
+import { getRatingInfo, CATEGORY_CHART_COLORS, CHART_CONTENT_STYLE } from "@/lib/carbon-display";
+import type { FC } from "react";
+
+// ---------------------------------------------------------------------------
+// Form schema
+// ---------------------------------------------------------------------------
 
 const formSchema = z.object({
-  transportKm: z.number().min(0).max(500),
-  transportMode: z.enum(["car", "bike", "bus", "train", "walking"]),
+  transportKm:    z.number().min(0).max(500),
+  transportMode:  z.enum(["car", "bike", "bus", "train", "walking"]),
   electricityKwh: z.number().min(0).max(5000),
-  dietType: z.enum(["vegan", "vegetarian", "omnivore"]),
+  dietType:       z.enum(["vegan", "vegetarian", "omnivore"]),
   flightsPerYear: z.number().min(0).max(100),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
-const TRANSPORT_ICONS: Record<string, React.FC<{ className?: string }>> = {
-  car: Car,
-  bike: Bike,
-  bus: Bus,
-  train: Train,
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Icons for each transport mode button in the calculator form. */
+const TRANSPORT_ICONS: Record<FormData["transportMode"], FC<{ className?: string }>> = {
+  car:     Car,
+  bike:    Bike,
+  bus:     Bus,
+  train:   Train,
   walking: Footprints,
 };
 
-const BREAKDOWN_COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#8b5cf6"];
-
-function getRatingLabel(score: number) {
-  if (score >= 80) return { label: "Excellent", color: "text-emerald-500", bg: "bg-emerald-500/10" };
-  if (score >= 60) return { label: "Good", color: "text-teal-500", bg: "bg-teal-500/10" };
-  if (score >= 40) return { label: "Average", color: "text-yellow-500", bg: "bg-yellow-500/10" };
-  if (score >= 20) return { label: "Poor", color: "text-orange-500", bg: "bg-orange-500/10" };
-  return { label: "Critical", color: "text-red-500", bg: "bg-red-500/10" };
-}
+/** Result state: mirrors the API response shape. */
+type FootprintResult = {
+  totalKgCo2: number;
+  transportKgCo2: number;
+  electricityKgCo2: number;
+  foodKgCo2: number;
+  travelKgCo2: number;
+  score: number;
+  rating: string;
+};
 
 export default function Calculator() {
   const queryClient = useQueryClient();
-  const [result, setResult] = useState<{
-    totalKgCo2: number; transportKgCo2: number; electricityKgCo2: number;
-    foodKgCo2: number; travelKgCo2: number; score: number; rating: string;
-  } | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [result, setResult] = useState<FootprintResult | null>(null);
+  const [saved, setSaved]   = useState(false);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      transportKm: 20,
-      transportMode: "car",
+      transportKm:    20,
+      transportMode:  "car",
       electricityKwh: 300,
-      dietType: "omnivore",
+      dietType:       "omnivore",
       flightsPerYear: 2,
     },
   });
@@ -87,23 +103,23 @@ export default function Calculator() {
     if (!result) return;
     createEntryMutation.mutate({
       data: {
-        transportKm: values.transportKm,
-        transportMode: values.transportMode,
+        transportKm:    values.transportKm,
+        transportMode:  values.transportMode,
         electricityKwh: values.electricityKwh,
-        dietType: values.dietType,
+        dietType:       values.dietType,
         flightsPerYear: values.flightsPerYear,
       },
     });
   };
 
   const breakdownData = result ? [
-    { name: "Transport", value: result.transportKgCo2 },
+    { name: "Transport",   value: result.transportKgCo2 },
     { name: "Electricity", value: result.electricityKgCo2 },
-    { name: "Food", value: result.foodKgCo2 },
-    { name: "Air Travel", value: result.travelKgCo2 },
+    { name: "Food",        value: result.foodKgCo2 },
+    { name: "Air Travel",  value: result.travelKgCo2 },
   ] : [];
 
-  const rating = result ? getRatingLabel(result.score) : null;
+  const rating       = result ? getRatingInfo(result.score) : null;
   const TransportIcon = TRANSPORT_ICONS[values.transportMode] ?? Car;
 
   return (
@@ -257,9 +273,11 @@ export default function Calculator() {
               ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" /> Calculating...</>
               : "Calculate My Footprint"}
           </Button>
+          {/* Suppress unused register warning — register is used by react-hook-form internally */}
+          <input type="hidden" {...register("transportMode")} />
         </form>
 
-        {/* Result */}
+        {/* Result panel */}
         <div className="space-y-4" aria-live="polite" aria-atomic="true">
           {result ? (
             <>
@@ -297,10 +315,12 @@ export default function Calculator() {
                         paddingAngle={3}
                         aria-label="Carbon footprint breakdown by category"
                       >
-                        {breakdownData.map((_, i) => <Cell key={i} fill={BREAKDOWN_COLORS[i]} />)}
+                        {breakdownData.map((_, i) => (
+                          <Cell key={i} fill={CATEGORY_CHART_COLORS[i % CATEGORY_CHART_COLORS.length]} />
+                        ))}
                       </Pie>
                       <Tooltip
-                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                        contentStyle={CHART_CONTENT_STYLE}
                         formatter={(v: number) => [`${v.toFixed(1)} kg CO₂`, ""]}
                       />
                       <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11 }}>{v}</span>} />
@@ -308,10 +328,10 @@ export default function Calculator() {
                   </ResponsiveContainer>
                   <div className="space-y-2 mt-2" role="list" aria-label="Emissions by category">
                     {[
-                      { label: "Transport", value: result.transportKgCo2, color: BREAKDOWN_COLORS[0] },
-                      { label: "Electricity", value: result.electricityKgCo2, color: BREAKDOWN_COLORS[1] },
-                      { label: "Food", value: result.foodKgCo2, color: BREAKDOWN_COLORS[2] },
-                      { label: "Air Travel", value: result.travelKgCo2, color: BREAKDOWN_COLORS[3] },
+                      { label: "Transport",   value: result.transportKgCo2,   color: CATEGORY_CHART_COLORS[0] },
+                      { label: "Electricity", value: result.electricityKgCo2, color: CATEGORY_CHART_COLORS[1] },
+                      { label: "Food",        value: result.foodKgCo2,        color: CATEGORY_CHART_COLORS[2] },
+                      { label: "Air Travel",  value: result.travelKgCo2,      color: CATEGORY_CHART_COLORS[3] },
                     ].map(item => (
                       <div key={item.label} className="flex items-center justify-between text-sm" role="listitem">
                         <div className="flex items-center gap-2">
